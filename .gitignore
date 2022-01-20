@@ -1,0 +1,10 @@
+# Gradle
+/.gradle
+/build
+/out
+
+# IDE
+/.idea
+
+# other
+publish.properties
