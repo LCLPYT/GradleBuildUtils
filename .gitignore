@@ -2,6 +2,7 @@
 /.gradle
 /build
 /out
+/repo
 
 # IDE
 /.idea
