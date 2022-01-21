@@ -36,7 +36,7 @@ public class BuildUtils {
             }
 
             if (!version.matches("^[0-9]+\\.[0-9]+\\.[0-9]+(?:-[a-z0-9]+)?$"))
-                throw new IllegalStateException("Latest tag '${version}' does not match the required versioning scheme");
+                throw new IllegalStateException(String.format("Latest tag '%s' does not match the required versioning scheme", version));
 
             return version;
         } catch (Exception ex) {
