@@ -1,9 +1,8 @@
-import java.util.Properties;
-
 plugins {
     java
     `java-gradle-plugin`
     `maven-publish`
+    id("gradle-build-utils")
 }
 
 repositories {
@@ -15,15 +14,16 @@ dependencies {
     testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:5.8.2")
 }
 
-val props = loadPublishProps()
-
+val loadProperties: groovy.lang.Closure<java.util.Properties> by extra
+val gitVersion: groovy.lang.Closure<String> by extra
 val mavenGroup: String by project
 val mavenArchivesName: String by project
+val props = loadProperties("publish.properties")
 
 base {
     group = mavenGroup
     archivesName.set(mavenArchivesName)
-    version = "1.0.0"
+    version = gitVersion()
 }
 
 java {
@@ -47,20 +47,6 @@ tasks.getByName<Test>("test") {
 }
 
 publishing {
-    publications {
-        create<MavenPublication>("mavenJava") {
-            artifactId = mavenArchivesName
-            group = mavenGroup
-
-            from(components["java"])
-
-            pom {
-                name.set("gradle-build-utils")
-                description.set("A gradle plugin to help with git versioning and config loading")
-            }
-        }
-    }
-
     repositories {
         maven {
             val env = System.getenv()
@@ -82,12 +68,4 @@ publishing {
             }
         }
     }
-}
-
-fun loadPublishProps(): Properties {
-    val props = Properties()
-    val propsFile = File(project.projectDir, "publish.properties")
-    if (propsFile.exists()) props.load(propsFile.bufferedReader())
-
-    return props
 }
