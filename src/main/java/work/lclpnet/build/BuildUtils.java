@@ -6,6 +6,8 @@ import java.util.stream.Collectors;
 
 public class BuildUtils {
 
+    public static final String VERSION_PATTERN = "^[0-9]+\\.[0-9]+\\.[0-9]+(?:[-+][a-zA-Z0-9.]+)?$";
+
     /**
      * Fetches and verifies the latest git tag as version name.
      *
@@ -14,6 +16,18 @@ public class BuildUtils {
      * @return The latest version fetched from git tags.
      */
     public static String getVersion(File pwd) {
+        return getVersion(pwd, VERSION_PATTERN);
+    }
+
+    /**
+     * Fetches and verifies the latest git tag as version name.
+     *
+     * @param pwd The directory of the local git repository.
+     * @param regex The regex pattern which must match the version.
+     * @throws IllegalStateException When the there is no git repository; not at least one tag; tag name mismatch; or another error.
+     * @return The latest version fetched from git tags.
+     */
+    public static String getVersion(File pwd, String regex) {
         try {
             String version;
             if (System.getenv().containsKey("CI_VERSION")) version = System.getenv().get("CI_VERSION");
@@ -21,7 +35,7 @@ public class BuildUtils {
                 // First, fetch all tags, to ensure all the tags are found
                 execProcess(pwd, "git", "fetch", "--tags", "--force");
 
-                // now actually get latest tag with git describe
+                // now actually get the latest tag with git describe
                 ProcessResult result = execProcess(pwd, "git", "describe", "--tags", "--abbrev=0");
 
                 // log outputs
@@ -35,7 +49,7 @@ public class BuildUtils {
                 version = result.stdout.trim().split("\\r?\\n")[0];
             }
 
-            if (!version.matches("^[0-9]+\\.[0-9]+\\.[0-9]+(?:-[a-z0-9]+)?$"))
+            if (!version.matches(regex))
                 throw new IllegalStateException(String.format("Latest tag '%s' does not match the required versioning scheme", version));
 
             return version;
