@@ -7,7 +7,7 @@ pluginManagement {
         gradlePluginPortal()
     }
     plugins {
-        id("gradle-build-utils").version("1.0.0")
+        id("gradle-build-utils").version("1.1.0")
     }
 }
 
