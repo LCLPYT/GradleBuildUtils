@@ -18,16 +18,16 @@ public class GradleBuildUtilsPlugin implements Plugin<Project> {
         final ExtensionContainer extensions = project.getExtensions();
         final ExtraPropertiesExtension extraProperties = extensions.getExtraProperties();
 
-        final String pattern;
-        if (extraProperties.has("versionPattern")) {
-            pattern = (String) extraProperties.get("versionPattern");
-        } else {
-            pattern = null;
-        }
-
         extraProperties.set("gitVersion", new Closure<String>(this, this) {
             @Override
             public String call() {
+                final String pattern;
+                if (extraProperties.has("versionPattern")) {
+                    pattern = (String) extraProperties.get("versionPattern");
+                } else {
+                    pattern = null;
+                }
+
                 if (pattern != null) return BuildUtils.getVersion(pwd, pattern);
                 else return BuildUtils.getVersion(pwd);
             }
