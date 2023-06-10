@@ -1,4 +1,4 @@
-package work.lclpnet.build;
+package work.lclpnet.build.util;
 
 public class ProcessResult {
 
