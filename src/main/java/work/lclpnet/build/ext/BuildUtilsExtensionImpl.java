@@ -15,6 +15,7 @@ public class BuildUtilsExtensionImpl implements BuildUtilsExtension {
     private final Project project;
     private final Property<String> versionPattern;
     private GitVersionResolver gitVersionResolver = null;
+    private String latestTag = null;
 
     public BuildUtilsExtensionImpl(Project project) {
         this.project = project;
@@ -22,23 +23,21 @@ public class BuildUtilsExtensionImpl implements BuildUtilsExtension {
     }
 
     @Override
-    public String gitVersion() {
-        final String version;
-
+    public String latestTag() {
         Map<String, String> env = System.getenv();
+
         if (env.containsKey("CI_VERSION")) {
-            version = env.get("CI_VERSION");
-        } else {
-            File pwd = project.getProjectDir();
-
-            synchronized (this) {
-                if (gitVersionResolver == null) {
-                    gitVersionResolver = new GitVersionResolver(project.getLogger());
-                }
-            }
-
-            version = gitVersionResolver.getGitVersion(pwd);
+            return env.get("CI_VERSION");
         }
+
+        if (latestTag != null) return latestTag;
+
+        return fetchLatestTag();
+    }
+
+    @Override
+    public String gitVersion() {
+        final String version = latestTag();
 
         String versionPattern = getVersionPattern().get();
         if (!version.matches(versionPattern)) {
@@ -85,5 +84,19 @@ public class BuildUtilsExtensionImpl implements BuildUtilsExtension {
     @Override
     public Property<String> getVersionPattern() {
         return versionPattern;
+    }
+
+    private synchronized String fetchLatestTag() {
+        if (latestTag != null) return latestTag;
+
+        File pwd = project.getProjectDir();
+
+        synchronized (this) {
+            if (gitVersionResolver == null) {
+                gitVersionResolver = new GitVersionResolver(project.getLogger());
+            }
+        }
+
+        return gitVersionResolver.getGitVersion(pwd);
     }
 }

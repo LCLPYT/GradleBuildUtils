@@ -6,6 +6,8 @@ import java.util.Properties;
 
 public interface BuildUtilsExtension {
 
+    String latestTag();
+
     String gitVersion();
 
     Property<String> getVersionPattern();
