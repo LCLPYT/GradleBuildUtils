@@ -4,7 +4,7 @@ plugins {
     java
     `java-gradle-plugin`
     `maven-publish`
-    id("gradle-build-utils").version("1.4.0")
+    id("gradle-build-utils").version("1.5.0")
 }
 
 repositories {
@@ -50,32 +50,6 @@ tasks.getByName<Test>("test") {
     useJUnitPlatform()
 }
 
-fun setupRepo(repositoryHandler: RepositoryHandler) {
-    repositoryHandler.maven {
-
-    }
-}
-
 publishing {
-    repositories {
-        maven {
-            val env = System.getenv()
-            if (listOf("DEPLOY_URL", "DEPLOY_USER", "DEPLOY_PASSWORD").all(env::containsKey)) {
-                credentials {
-                    username = env["DEPLOY_USER"]
-                    password = env["DEPLOY_PASSWORD"]
-                }
-                url = uri(env["DEPLOY_URL"]!!)
-            }
-            else if (listOf("mavenHost", "mavenUser", "mavenPassword").all(props::containsKey)) {
-                credentials {
-                    username = props.getProperty("mavenUser")
-                    password = props.getProperty("mavenPassword")
-                }
-                url = uri(props.getProperty("mavenHost")!!)
-            } else {
-                url = uri("file:///${project.projectDir}/repo")
-            }
-        }
-    }
+    buildUtils.setupPublishRepository(this)
 }
