@@ -2,6 +2,7 @@ package work.lclpnet.build.ext;
 
 import org.gradle.api.Project;
 import org.gradle.api.provider.Property;
+import org.gradle.api.publish.PublishingExtension;
 import work.lclpnet.build.util.GitVersionResolver;
 
 import java.io.File;
@@ -9,6 +10,7 @@ import java.io.InputStream;
 import java.nio.file.Files;
 import java.util.Map;
 import java.util.Properties;
+import java.util.stream.Stream;
 
 public class BuildUtilsExtensionImpl implements BuildUtilsExtension {
 
@@ -28,6 +30,16 @@ public class BuildUtilsExtensionImpl implements BuildUtilsExtension {
 
         if (env.containsKey("CI_VERSION")) {
             return env.get("CI_VERSION");
+        }
+
+        if (env.containsKey("GITHUB_REF")) {
+            String githubRef = env.get("GITHUB_REF");
+
+            String prefix = "refs/tags/";
+
+            if (githubRef.startsWith(prefix)) {
+                return githubRef.substring(prefix.length());
+            }
         }
 
         if (latestTag != null) return latestTag;
@@ -98,5 +110,30 @@ public class BuildUtilsExtensionImpl implements BuildUtilsExtension {
         }
 
         return gitVersionResolver.getGitVersion(pwd);
+    }
+
+    @Override
+    public void setupPublishRepository(PublishingExtension extension, Properties props) {
+        extension.repositories(repositories -> repositories.maven(repo -> {
+            Map<String, String> env = System.getenv();
+
+            if (Stream.of("DEPLOY_URL", "DEPLOY_USER", "DEPLOY_PASSWORD").allMatch(env::containsKey)) {
+                repo.credentials(credentials -> {
+                    credentials.setUsername(env.get("DEPLOY_USER"));
+                    credentials.setPassword(env.get("DEPLOY_PASSWORD"));
+                });
+
+                repo.setUrl(props.getProperty("DEPLOY_URL"));
+            } else if (Stream.of("mavenHost", "mavenUser", "mavenPassword").allMatch(props::containsKey)) {
+                repo.credentials(credentials -> {
+                    credentials.setUsername(props.getProperty("mavenUser"));
+                    credentials.setPassword(props.getProperty("mavenPassword"));
+                });
+
+                repo.setUrl(props.getProperty("mavenHost"));
+            } else {
+                repo.setUrl("file:///" + project.getProjectDir().getAbsolutePath() + "/repo");
+            }
+        }));
     }
 }
