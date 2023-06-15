@@ -1,8 +1,8 @@
 package work.lclpnet.build.ext;
 
 import org.gradle.api.Project;
+import org.gradle.api.artifacts.dsl.RepositoryHandler;
 import org.gradle.api.provider.Property;
-import org.gradle.api.publish.PublishingExtension;
 import work.lclpnet.build.util.GitVersionResolver;
 
 import java.io.File;
@@ -113,8 +113,8 @@ public class BuildUtilsExtensionImpl implements BuildUtilsExtension {
     }
 
     @Override
-    public void setupPublishRepository(PublishingExtension extension, Properties props) {
-        extension.repositories(repositories -> repositories.maven(repo -> {
+    public void setupPublishRepository(RepositoryHandler repositories, Properties props) {
+        repositories.maven(repo -> {
             Map<String, String> env = System.getenv();
 
             if (Stream.of("DEPLOY_URL", "DEPLOY_USER", "DEPLOY_PASSWORD").allMatch(env::containsKey)) {
@@ -134,6 +134,6 @@ public class BuildUtilsExtensionImpl implements BuildUtilsExtension {
             } else {
                 repo.setUrl("file:///" + project.getProjectDir().getAbsolutePath() + "/repo");
             }
-        }));
+        });
     }
 }
