@@ -51,5 +51,5 @@ tasks.getByName<Test>("test") {
 }
 
 publishing {
-    buildUtils.setupPublishRepository(this, props)
+    buildUtils.setupPublishRepository(this)
 }
