@@ -123,7 +123,7 @@ public class BuildUtilsExtensionImpl implements BuildUtilsExtension {
                     credentials.setPassword(env.get("DEPLOY_PASSWORD"));
                 });
 
-                repo.setUrl(props.getProperty("DEPLOY_URL"));
+                repo.setUrl(env.getProperty("DEPLOY_URL"));
             } else if (Stream.of("mavenHost", "mavenUser", "mavenPassword").allMatch(props::containsKey)) {
                 repo.credentials(credentials -> {
                     credentials.setUsername(props.getProperty("mavenUser"));
