@@ -12,12 +12,15 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.stream.Stream;
 
+import static work.lclpnet.build.Constants.*;
+
 public class BuildUtilsExtensionImpl implements BuildUtilsExtension {
 
     private final Project project;
     private final Property<String> versionPattern;
+    private final Properties properties = new Properties();
     private GitVersionResolver gitVersionResolver = null;
-    private String latestTag = null;
+    private volatile String latestTag = null;
 
     public BuildUtilsExtensionImpl(Project project) {
         this.project = project;
@@ -28,12 +31,12 @@ public class BuildUtilsExtensionImpl implements BuildUtilsExtension {
     public String latestTag() {
         Map<String, String> env = System.getenv();
 
-        if (env.containsKey("CI_VERSION")) {
-            return env.get("CI_VERSION");
+        if (env.containsKey(ENV_CI_VERSION)) {
+            return env.get(ENV_CI_VERSION);
         }
 
-        if (env.containsKey("GITHUB_REF")) {
-            String githubRef = env.get("GITHUB_REF");
+        if (env.containsKey(ENV_GITHUB_REF)) {
+            String githubRef = env.get(ENV_GITHUB_REF);
 
             String prefix = "refs/tags/";
 
@@ -42,22 +45,24 @@ public class BuildUtilsExtensionImpl implements BuildUtilsExtension {
             }
         }
 
-        if (latestTag != null) return latestTag;
-
         return fetchLatestTag();
     }
 
     @Override
     public String gitVersion() {
-        final String version = latestTag();
+        String version = latestTag();
 
         String versionPattern = getVersionPattern().get();
         if (!version.matches(versionPattern)) {
             throw new IllegalStateException(String.format("Latest tag '%s' does not match the required versioning scheme", version));
         }
 
-        if ("true".equals(System.getProperty("build.local"))) {
-            return version + "+local";
+        if ("true".equals(System.getProperty(PROP_BUILD_LOCAL))) {
+            version += "+local";
+        }
+
+        if (properties.containsKey(PROP_VERSION_OVERRIDE)) {
+            version = properties.getProperty(PROP_VERSION_OVERRIDE);
         }
 
         project.getLogger().lifecycle("Project version: {}", version);
@@ -80,17 +85,15 @@ public class BuildUtilsExtensionImpl implements BuildUtilsExtension {
                     String.class.getName()));
         }
 
-        final Properties props = new Properties();
-
         if (file.exists()) {
             try (InputStream in = Files.newInputStream(file.toPath())) {
-                props.load(in);
+                properties.load(in);
             } catch (Exception ex) {
                 throw new IllegalStateException(String.format("Error loading %s", file.getAbsolutePath()), ex);
             }
         }
 
-        return props;
+        return properties;
     }
 
     @Override
@@ -98,18 +101,26 @@ public class BuildUtilsExtensionImpl implements BuildUtilsExtension {
         return versionPattern;
     }
 
-    private synchronized String fetchLatestTag() {
-        if (latestTag != null) return latestTag;
-
-        File pwd = project.getProjectDir();
+    private String fetchLatestTag() {
+        if (latestTag != null) {
+            return latestTag;
+        }
 
         synchronized (this) {
+            if (latestTag != null) {
+                return latestTag;
+            }
+
             if (gitVersionResolver == null) {
                 gitVersionResolver = new GitVersionResolver(project.getLogger());
             }
-        }
 
-        return gitVersionResolver.getGitVersion(pwd);
+            File pwd = project.getProjectDir();
+
+            latestTag = gitVersionResolver.getGitVersion(pwd);
+
+            return latestTag;
+        }
     }
 
     @Override
@@ -117,23 +128,39 @@ public class BuildUtilsExtensionImpl implements BuildUtilsExtension {
         repositories.maven(repo -> {
             Map<String, String> env = System.getenv();
 
-            if (Stream.of("DEPLOY_URL", "DEPLOY_USER", "DEPLOY_PASSWORD").allMatch(env::containsKey)) {
+            if (Stream.of(ENV_DEPLOY_URL, ENV_DEPLOY_USER, ENV_DEPLOY_PASSWORD).allMatch(env::containsKey)) {
                 repo.credentials(credentials -> {
-                    credentials.setUsername(env.get("DEPLOY_USER"));
-                    credentials.setPassword(env.get("DEPLOY_PASSWORD"));
+                    credentials.setUsername(env.get(ENV_DEPLOY_USER));
+                    credentials.setPassword(env.get(ENV_DEPLOY_PASSWORD));
                 });
 
-                repo.setUrl(env.get("DEPLOY_URL"));
-            } else if (Stream.of("mavenHost", "mavenUser", "mavenPassword").allMatch(props::containsKey)) {
-                repo.credentials(credentials -> {
-                    credentials.setUsername(props.getProperty("mavenUser"));
-                    credentials.setPassword(props.getProperty("mavenPassword"));
-                });
-
-                repo.setUrl(props.getProperty("mavenHost"));
-            } else {
-                repo.setUrl("file:///" + project.getProjectDir().getAbsolutePath() + "/repo");
+                repo.setUrl(env.get(ENV_DEPLOY_URL));
+                return;
             }
+
+            if (project.getVersion().toString().endsWith("-SNAPSHOT") && Stream.of(PROP_SNAPSHOT_URL, PROP_MAVEN_USER,
+                    PROP_MAVEN_PASSWORD).allMatch(props::containsKey)) {
+
+                repo.credentials(credentials -> {
+                    credentials.setUsername(props.getProperty(PROP_MAVEN_USER));
+                    credentials.setPassword(props.getProperty(PROP_MAVEN_PASSWORD));
+                });
+
+                repo.setUrl(props.getProperty(PROP_SNAPSHOT_URL));
+                return;
+            }
+
+            if (Stream.of(PROP_MAVEN_URL, PROP_MAVEN_USER, PROP_MAVEN_PASSWORD).allMatch(props::containsKey)) {
+                repo.credentials(credentials -> {
+                    credentials.setUsername(props.getProperty(PROP_MAVEN_USER));
+                    credentials.setPassword(props.getProperty(PROP_MAVEN_PASSWORD));
+                });
+
+                repo.setUrl(props.getProperty(PROP_MAVEN_URL));
+                return;
+            }
+
+            repo.setUrl("file:///" + project.getProjectDir().getAbsolutePath() + "/repo");
         });
     }
 }
