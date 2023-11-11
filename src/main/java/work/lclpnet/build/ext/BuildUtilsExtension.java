@@ -14,6 +14,8 @@ public interface BuildUtilsExtension {
 
     Property<String> getVersionPattern();
 
+    Property<String> getFallbackVersion();
+
     /**
      * Loads properties from a source, such as a file or filename.
      * The properties are loaded into this extension.

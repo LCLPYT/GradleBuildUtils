@@ -9,9 +9,11 @@ public class GitVersionResolver {
 
     public static final String VERSION_PATTERN = "^[0-9]+\\.[0-9]+\\.[0-9]+(?:[-+][a-zA-Z0-9.]+)?$";
     private final Logger logger;
+    private final String fallbackVersion;
 
-    public GitVersionResolver(Logger logger) {
+    public GitVersionResolver(Logger logger, String fallbackVersion) {
         this.logger = logger;
+        this.fallbackVersion = fallbackVersion;
     }
 
     /**
@@ -42,7 +44,8 @@ public class GitVersionResolver {
 
             return result.stdout.trim().split("\\r?\\n")[0];
         } catch (Exception ex) {
-            throw new IllegalStateException("Could not determine version", ex);
+            logger.warn("Could not determine version from latest git tag. Fallback to {}", fallbackVersion, ex);
+            return fallbackVersion;
         }
     }
 }

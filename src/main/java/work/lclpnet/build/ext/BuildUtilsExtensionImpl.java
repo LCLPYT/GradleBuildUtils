@@ -18,6 +18,7 @@ public class BuildUtilsExtensionImpl implements BuildUtilsExtension {
 
     private final Project project;
     private final Property<String> versionPattern;
+    private final Property<String> fallbackVersion;
     private final Properties properties = new Properties();
     private GitVersionResolver gitVersionResolver = null;
     private volatile String latestTag = null;
@@ -25,6 +26,7 @@ public class BuildUtilsExtensionImpl implements BuildUtilsExtension {
     public BuildUtilsExtensionImpl(Project project) {
         this.project = project;
         this.versionPattern = project.getObjects().property(String.class).convention(GitVersionResolver.VERSION_PATTERN);
+        this.fallbackVersion = project.getObjects().property(String.class).convention("0.1.0-SNAPSHOT");
     }
 
     @Override
@@ -101,6 +103,11 @@ public class BuildUtilsExtensionImpl implements BuildUtilsExtension {
         return versionPattern;
     }
 
+    @Override
+    public Property<String> getFallbackVersion() {
+        return fallbackVersion;
+    }
+
     private String fetchLatestTag() {
         if (latestTag != null) {
             return latestTag;
@@ -112,7 +119,7 @@ public class BuildUtilsExtensionImpl implements BuildUtilsExtension {
             }
 
             if (gitVersionResolver == null) {
-                gitVersionResolver = new GitVersionResolver(project.getLogger());
+                gitVersionResolver = new GitVersionResolver(project.getLogger(), fallbackVersion.get());
             }
 
             File pwd = project.getProjectDir();
